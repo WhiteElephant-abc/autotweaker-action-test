@@ -14,15 +14,22 @@ jobs:
       - uses: AutoTweaker/action@v1
         with:
           prompt: |
-            Create a file named hello.txt in the current working directory.
-            Its content must be exactly: Hello from AutoTweaker!
-            When you have finished, reply with a brief summary of what you did.
+            Build a tiny Python library in the working directory.
+
+            1. Create `mathkit.py` exposing two functions:
+               - `add(a, b)` returns the sum
+               - `divide(a, b)` returns the quotient, raising `ValueError` when `b` is zero
+            2. Create `test_mathkit.py` using `unittest`, covering the sum, the quotient, and the zero-division case.
+            3. Run `python -m unittest -v` and make sure every test passes. If something fails, fix it and run again.
+            4. Add a module docstring to `mathkit.py` with a short usage example.
+
+            When you are done, reply with a summary of the files you created and the final test result.
           api-key: ${{ secrets.AUTOTWEAKER_API_KEY }}
           provider-type: deepseek
           model-id: deepseek-flash
 
       - name: Verify
         run: |
-          test -f hello.txt
-          echo "--- hello.txt ---"
-          cat hello.txt
+          test -f mathkit.py
+          test -f test_mathkit.py
+          python -m unittest -v
