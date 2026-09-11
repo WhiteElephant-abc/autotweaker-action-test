@@ -43,7 +43,8 @@ jobs:
           set -euo pipefail
 
           base="${GITHUB_REF_NAME}"
-          branch="autotweaker/run-${GITHUB_RUN_ID}"
+          # GITHUB_RUN_ID is stable across re-runs, the attempt is what changes.
+          branch="autotweaker/run-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
           title="AutoTweaker: ${PROMPT%%$'\n'*}"
           title="${title:0:60}"
 
