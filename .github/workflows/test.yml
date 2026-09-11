@@ -1,0 +1,28 @@
+name: Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: AutoTweaker/action@v1
+        with:
+          prompt: |
+            Create a file named hello.txt in the current working directory.
+            Its content must be exactly: Hello from AutoTweaker!
+            Then stop.
+          api-key: ${{ secrets.AUTOTWEAKER_API_KEY }}
+          provider-type: deepseek
+          model-id: deepseek-flash
+
+      - name: Verify
+        run: |
+          test -f hello.txt
+          echo "--- hello.txt ---"
+          cat hello.txt
