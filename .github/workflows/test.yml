@@ -2,6 +2,11 @@ name: Test
 
 on:
   workflow_dispatch:
+    inputs:
+      prompt:
+        description: Task the agent should complete
+        required: true
+        type: string
 
 jobs:
   test:
@@ -13,23 +18,11 @@ jobs:
 
       - uses: AutoTweaker/action@v1
         with:
-          prompt: |
-            Build a tiny Python library in the working directory.
-
-            1. Create `mathkit.py` exposing two functions:
-               - `add(a, b)` returns the sum
-               - `divide(a, b)` returns the quotient, raising `ValueError` when `b` is zero
-            2. Create `test_mathkit.py` using `unittest`, covering the sum, the quotient, and the zero-division case.
-            3. Run `python -m unittest -v` and make sure every test passes. If something fails, fix it and run again.
-            4. Add a module docstring to `mathkit.py` with a short usage example.
-
-            When you are done, reply with a summary of the files you created and the final test result.
+          prompt: ${{ inputs.prompt }}
           api-key: ${{ secrets.AUTOTWEAKER_API_KEY }}
           provider-type: deepseek
           model-id: deepseek-flash
 
-      - name: Verify
-        run: |
-          test -f mathkit.py
-          test -f test_mathkit.py
-          python -m unittest -v
+      - name: Changes
+        if: always()
+        run: git status --short
