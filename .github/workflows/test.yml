@@ -16,7 +16,7 @@ jobs:
           prompt: |
             Create a file named hello.txt in the current working directory.
             Its content must be exactly: Hello from AutoTweaker!
-            Then stop.
+            When you have finished, reply with a brief summary of what you did.
           api-key: ${{ secrets.AUTOTWEAKER_API_KEY }}
           provider-type: deepseek
           model-id: deepseek-flash
