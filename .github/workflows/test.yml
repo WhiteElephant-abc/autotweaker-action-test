@@ -8,8 +8,9 @@ on:
         required: true
         type: string
 
-# permissions are job-wide, so the agent step can technically reach this token as
-# well. Only the Create PR step actually uses it.
+# permissions are job-wide, so the agent step runs under the same GITHUB_TOKEN.
+# It cannot reach it though: the checkout below does not persist it into git
+# config, and GH_TOKEN is scoped to the one step that needs it.
 permissions:
   contents: write
   pull-requests: write
@@ -21,6 +22,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Leaves no credentials in .git/config for the agent to find.
+          persist-credentials: false
 
       - name: Run agent
         uses: AutoTweaker/action@v1
@@ -45,8 +49,6 @@ jobs:
           base="${GITHUB_REF_NAME}"
           # GITHUB_RUN_ID is stable across re-runs, the attempt is what changes.
           branch="autotweaker/run-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-          title="AutoTweaker: ${PROMPT%%$'\n'*}"
-          title="${title:0:60}"
 
           # The agent may have committed on its own; staging first covers both cases,
           # and the comparison against the base catches whatever it already committed.
@@ -56,14 +58,19 @@ jobs:
             exit 1
           fi
 
+          title='AutoTweaker: automated changes'
           git checkout -b "${branch}"
           if ! git diff --cached --quiet; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git commit -m "${title}"
+            git commit -m "${PROMPT}"
+            title=$(git log -1 --format=%s)
           fi
 
-          git push -u origin "${branch}"
+          # The checkout persists no credentials, so this one push authenticates
+          # itself the same way the checkout would have.
+          auth="http.https://github.com/.extraheader=AUTHORIZATION: basic $(printf 'x-access-token:%s' "${GH_TOKEN}" | base64 -w0)"
+          git -c "${auth}" push -u origin "${branch}"
 
           body="${RUNNER_TEMP}/pr-body.md"
           {
