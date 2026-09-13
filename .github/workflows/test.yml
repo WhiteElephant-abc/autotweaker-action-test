@@ -10,7 +10,7 @@ on:
 
 # permissions are job-wide, so the agent step runs under the same GITHUB_TOKEN.
 # It cannot reach it though: the checkout below does not persist it into git
-# config, and GH_TOKEN is scoped to the one step that needs it.
+# config, and the token is only handed to the step that needs it.
 permissions:
   contents: write
   pull-requests: write
@@ -48,37 +48,23 @@ jobs:
         if: always()
         run: git status --short
 
-      - name: Create PR
+      # create-pull-request commits the workspace changes itself, but the title has
+      # to come from the agent's own commit, so it is read before the action runs.
+      - name: Prepare PR metadata
         if: success()
+        id: meta
         env:
-          GH_TOKEN: ${{ github.token }}
           TASK: ${{ inputs.prompt }}
         run: |
           set -euo pipefail
 
-          base="${GITHUB_REF_NAME}"
-          # GITHUB_RUN_ID is stable across re-runs, the attempt is what changes.
-          branch="autotweaker/run-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
-
-          git add -A
-          if git diff --cached --quiet && git diff --quiet "origin/${base}" HEAD; then
-            echo "::error::The agent left no changes against ${base}."
-            exit 1
+          # A clean tree means the agent committed, and its message describes the work.
+          if git diff --quiet && git diff --cached --quiet; then
+            title=$(git log -1 --format=%s)
+          else
+            title='AutoTweaker: automated changes'
           fi
-
-          git checkout -b "${branch}"
-          if ! git diff --cached --quiet; then
-            # The agent did not commit; wrap its work up so the branch is complete.
-            git commit -m 'AutoTweaker: automated changes'
-          fi
-
-          # Normally the agent's own commit, which describes what it actually did.
-          title=$(git log -1 --format=%s)
-
-          # The checkout persists no credentials, so this one push authenticates
-          # itself the same way the checkout would have.
-          auth="http.https://github.com/.extraheader=AUTHORIZATION: basic $(printf 'x-access-token:%s' "${GH_TOKEN}" | base64 -w0)"
-          git -c "${auth}" push -u origin "${branch}"
+          printf 'title=%s\n' "${title}" >> "${GITHUB_OUTPUT}"
 
           body="${RUNNER_TEMP}/pr-body.md"
           {
@@ -86,12 +72,14 @@ jobs:
               "${GITHUB_RUN_ID}" "${GITHUB_SERVER_URL}" "${GITHUB_REPOSITORY}" "${GITHUB_RUN_ID}"
             printf '## Task\n\n'
             printf '%s\n' "${TASK}" | sed 's/^/    /'
-            printf '\n## Changes\n\n'
-            git diff --stat "origin/${base}" HEAD | sed 's/^/    /'
           } > "${body}"
 
-          gh pr create \
-            --base "${base}" \
-            --head "${branch}" \
-            --title "${title}" \
-            --body-file "${body}"
+      - name: Create Pull Request
+        if: success()
+        uses: peter-evans/create-pull-request@v8.1.1
+        with:
+          # GITHUB_RUN_ID is stable across re-runs, the attempt is what changes.
+          branch: autotweaker/run-${{ github.run_id }}-${{ github.run_attempt }}
+          title: ${{ steps.meta.outputs.title }}
+          commit-message: ${{ steps.meta.outputs.title }}
+          body-path: ${{ runner.temp }}/pr-body.md
