@@ -33,7 +33,7 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
       - name: Run agent
-        uses: AutoTweaker/action@v1
+        uses: AutoTweaker/action@43e0ad982fb66d95b8644ea847894e8bb4b8b7ae
         with:
           prompt: |
             ${{ inputs.prompt }}
@@ -43,6 +43,9 @@ jobs:
           api-key: ${{ secrets.AUTOTWEAKER_API_KEY }}
           provider-type: deepseek
           model-id: deepseek-flash
+          plugin-urls: |
+            https://github.com/WhiteElephant-abc/autotweaker-action-test/releases/download/v0.1.0/plugin-a-0.1.0.jar
+            https://github.com/WhiteElephant-abc/autotweaker-action-test/releases/download/v0.1.0/plugin-b-0.1.0.jar
 
       - name: Show changes
         if: always()
