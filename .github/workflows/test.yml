@@ -33,7 +33,7 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
 
       - name: Run agent
-        uses: AutoTweaker/action@43e0ad982fb66d95b8644ea847894e8bb4b8b7ae
+        uses: AutoTweaker/action@v1
         with:
           prompt: |
             ${{ inputs.prompt }}
